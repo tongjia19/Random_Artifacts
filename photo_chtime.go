@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"strings"
 	"time"
 )
@@ -18,7 +19,9 @@ const (
 )
 
 func main() {
-	path := os.Args[1]
+	tz := ottawaTZ
+
+	fPath := os.Args[1]
 
 	apply := false
 	if len(os.Args) > 2 {
@@ -27,7 +30,7 @@ func main() {
 		}
 	}
 
-	files, err := ioutil.ReadDir(path)
+	files, err := ioutil.ReadDir(fPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -35,14 +38,16 @@ func main() {
 	for _, f := range files {
 		fn := f.Name()
 		if fn[len(fn)-3:] != "jpg" && fn[len(fn)-3:] != "mp4" && fn[len(fn)-3:] != "gif" {
+			fmt.Println("Skipped:", fn)
 			continue
 		}
 		tt := strings.Split(f.Name()[4:len(fn)-4], "_")
-		ttt := tt[0] + "_T" + tt[1] + beijingTZ
+		ttt := tt[0] + "_T" + tt[1] + tz
 
 		t, err := time.Parse(timeLayout, ttt)
 		if err != nil {
 			fmt.Println(err)
+			continue
 		}
 
 		fnN := t.Format(timeLayoutR) + "_" + fn
@@ -50,8 +55,16 @@ func main() {
 		fmt.Println(fn, "->", ttt, "->", t, "->", fnN)
 
 		if apply {
-			os.Chtimes(path+fn, time.Now(), t)
-			os.Rename(path+fn, path+fnN)
+			err = os.Chtimes(path.Join(fPath, fn), time.Now(), t)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			err = os.Rename(path.Join(fPath, fn), path.Join(fPath, fnN))
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
 		}
 	}
 
