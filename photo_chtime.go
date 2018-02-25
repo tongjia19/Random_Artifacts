@@ -16,6 +16,9 @@ const (
 
 	ottawaTZ  = "-05:00"
 	beijingTZ = "+08:00"
+
+	checkMark = "✓"
+	xMark     = "✗"
 )
 
 func main() {
@@ -35,38 +38,54 @@ func main() {
 		log.Fatal(err)
 	}
 
+	fmt.Println("")
+
 	for _, f := range files {
-		fn := f.Name()
-		if fn[len(fn)-3:] != "jpg" && fn[len(fn)-3:] != "mp4" && fn[len(fn)-3:] != "gif" {
-			fmt.Println("Skipped:", fn)
-			continue
-		}
-		tt := strings.Split(f.Name()[4:len(fn)-4], "_")
-		ttt := tt[0] + "_T" + tt[1] + tz
+		mark, result := action(fPath, f, tz, apply)
+		fmt.Println(mark, result)
+	}
 
-		t, err := time.Parse(timeLayout, ttt)
+	fmt.Printf("\nApplied: %t\n\n", apply)
+}
+
+func action(fPath string, f os.FileInfo, tz string, apply bool) (string, string) {
+	var result string
+
+	fn := f.Name()
+	result += fn
+	if fn[len(fn)-3:] != "jpg" && fn[len(fn)-3:] != "mp4" && fn[len(fn)-3:] != "gif" {
+		result += " -> " + "skipped"
+		if f.IsDir() {
+			result += " (DIR)"
+		}
+		return xMark, result
+	}
+	tt := strings.Split(f.Name()[4:len(fn)-4], "_")
+	ttt := tt[0] + "_T" + tt[1] + tz
+	result += " -> " + ttt
+
+	t, err := time.Parse(timeLayout, ttt)
+	if err != nil {
+		result += " -> " + err.Error()
+		return xMark, result
+	}
+	result += " -> " + t.String()
+
+	fnN := t.Format(timeLayoutR) + "_" + fn
+	result += " -> " + fnN
+
+	if apply {
+		err = os.Chtimes(path.Join(fPath, fn), time.Now(), t)
 		if err != nil {
-			fmt.Println(err)
-			continue
+			result += " -> " + err.Error()
+			return xMark, result
 		}
-
-		fnN := t.Format(timeLayoutR) + "_" + fn
-
-		fmt.Println(fn, "->", ttt, "->", t, "->", fnN)
-
-		if apply {
-			err = os.Chtimes(path.Join(fPath, fn), time.Now(), t)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-			err = os.Rename(path.Join(fPath, fn), path.Join(fPath, fnN))
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
+		err = os.Rename(path.Join(fPath, fn), path.Join(fPath, fnN))
+		if err != nil {
+			result += " -> " + err.Error()
+			return xMark, result
 		}
 	}
 
-	fmt.Println("Applied:", apply)
+	return checkMark, result
 }
