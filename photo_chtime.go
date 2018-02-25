@@ -41,6 +41,9 @@ func main() {
 	fmt.Println("")
 
 	for _, f := range files {
+		if f.Name() == ".DS_Store" {
+			continue
+		}
 		mark, result := action(fPath, f, tz, apply)
 		fmt.Println(mark, result)
 	}
@@ -53,6 +56,7 @@ func action(fPath string, f os.FileInfo, tz string, apply bool) (string, string)
 
 	fn := f.Name()
 	result += fn
+
 	if fn[len(fn)-3:] != "jpg" && fn[len(fn)-3:] != "mp4" && fn[len(fn)-3:] != "gif" {
 		result += " -> " + "skipped"
 		if f.IsDir() {
@@ -60,7 +64,26 @@ func action(fPath string, f os.FileInfo, tz string, apply bool) (string, string)
 		}
 		return xMark, result
 	}
-	tt := strings.Split(f.Name()[4:len(fn)-4], "_")
+
+	if strings.Contains(fn, "Burst_Cover_Collage_") {
+		fn = strings.Replace(fn, "Burst_Cover_Collage_", "COL_", 1)
+		fn = fn[:len(fn)-10] + "_" + fn[len(fn)-10:]
+		result += " -> " + fn
+	}
+	if strings.Contains(fn, "Burst_Cover_GIF_Action_") {
+		fn = strings.Replace(fn, "Burst_Cover_GIF_Action_", "GIF_", 1)
+		fn = fn[:len(fn)-10] + "_" + fn[len(fn)-10:]
+		result += " -> " + fn
+	}
+	if strings.Contains(fn, "_BURST") {
+		fn = fn[14:]
+		fn = strings.Replace(fn, "_BURST", "IMG_", 1)
+		fn = strings.Replace(fn, "_COVER", "", 1)
+		fn = fn[:len(fn)-10] + "_" + fn[len(fn)-10:]
+		result += " -> " + fn
+	}
+
+	tt := strings.Split(fn[4:len(fn)-4], "_")
 	ttt := tt[0] + "_T" + tt[1] + tz
 	result += " -> " + ttt
 
@@ -75,12 +98,12 @@ func action(fPath string, f os.FileInfo, tz string, apply bool) (string, string)
 	result += " -> " + fnN
 
 	if apply {
-		err = os.Chtimes(path.Join(fPath, fn), time.Now(), t)
+		err = os.Chtimes(path.Join(fPath, f.Name()), time.Now(), t)
 		if err != nil {
 			result += " -> " + err.Error()
 			return xMark, result
 		}
-		err = os.Rename(path.Join(fPath, fn), path.Join(fPath, fnN))
+		err = os.Rename(path.Join(fPath, f.Name()), path.Join(fPath, fnN))
 		if err != nil {
 			result += " -> " + err.Error()
 			return xMark, result
