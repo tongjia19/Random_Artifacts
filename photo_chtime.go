@@ -21,26 +21,26 @@ const (
 
 	beijingTZ = "+08:00"
 
+	ottawaTZ = "-05:00"
 	ottawaEDTTZ = "-04:00"
-	ottawaESTTZ = "-05:00"
 
 	euroTZ = "+01:00"
 )
 
 var (
 	// OTTAWA ..
-	OTTAWA         = false
+	OTTAWA         = true
 	ottawaEDTTS, _ = time.Parse("2006-01-02-15-04-05", "2018-03-10-03-00-00")
 	ottawaEDTTE, _ = time.Parse("2006-01-02-15-04-05", "2018-11-03-02-00-00")
 
 	// RENAME ..
-	RENAME = true
+	RENAME = false
 
 	// RENAMED ..
-	RENAMED = false
+	RENAMED = true
 
 	// TZ ..
-	TZ = euroTZ
+	TZ = ottawaTZ
 )
 
 func main() {
@@ -148,46 +148,6 @@ func action(fPath string, f os.FileInfo, tz string, apply bool) (string, string)
 	return checkMark, result
 }
 
-func actionCHTIME(fPath string, f os.FileInfo, tz string, apply bool) (string, string) {
-	var result string
-
-	fn := f.Name()
-	result += fn
-
-	correctType, typee := checkFileType(fn)
-	if !correctType {
-		result += typee
-		return xMark, result
-	}
-
-	if strings.Count(fn[:20], "-") == 5 {
-		fn = fn[:19]
-	}
-	ttt := fn
-	result += " -> " + ttt
-
-	tttz := ttt + tz
-	t, err := time.Parse(timeLayoutRCHTIME, tttz)
-	if err != nil {
-		result += " -> " + err.Error()
-		return xMark, result
-	}
-	if OTTAWA {
-		t = ottawaDST(t, ttt)
-	}
-	result += " -> " + t.String()
-
-	if apply {
-		err = os.Chtimes(path.Join(fPath, f.Name()), time.Now(), t)
-		if err != nil {
-			result += " -> " + err.Error()
-			return xMark, result
-		}
-	}
-
-	return checkMark, result
-}
-
 func checkFileType(fn string) (bool, string) {
 	fnExt := fn[len(fn)-3:]
 	if !strings.EqualFold(fnExt, "jpg") &&
@@ -223,8 +183,7 @@ func inTimeSpan(start, end, check time.Time) bool {
 
 func ottawaDST(t time.Time, ttt string) time.Time {
 	if inTimeSpan(ottawaEDTTS, ottawaEDTTE, t) {
-		TZ = ottawaEDTTZ
-		tttz := ttt + TZ
+		tttz := ttt + ottawaEDTTZ
 		t, _ = time.Parse(timeLayoutRCHTIME, tttz)
 	}
 	return t
